@@ -10,9 +10,15 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	app, err := setupFirebase()
 	if err != nil {
-		fmt.Errorf("error initializing app: %v\n", err)
+		fmt.Errorf("Error initializing app: %v\n", err)
+		return
+	}
+	db, err := app.Database(ctx)
+	if err != nil {
+		fmt.Errorf("Error initializing database: %v\n", err)
 		return
 	}
 	r := setupRouter()
@@ -27,6 +33,7 @@ func setupRouter() *gin.Engine {
 	api := r.Group("/api")
 	{
 		api.GET("/health", healthCheck)
+		api.GET("/mlb-players", getMLBPlayerList)
 	}
 
 	return r
@@ -49,7 +56,7 @@ func corsMiddleware() gin.HandlerFunc {
 
 func setupFirebase() (*firebase.App, error) {
 
-	opt := option.WithCredentialsFile("path/to/serviceAccountKey.json")
+	opt := option.WithCredentialsFile("firebase_key.json")
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing app: %v", err)

@@ -13,11 +13,14 @@ func healthCheck(c *gin.Context) {
 	})
 }
 
-func getMLBPlayerList() ([]string, error) {
+func getMLBPlayerList(c *gin.Context) {
 	url := "https://statsapi.mlb.com/api/v1/sports/1/players?activeStatus=active"
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		c.JSON(500, gin.H{
+			"status":  "Internal Server Error",
+			"message": "Error fetching MLB player list",
+		})
 	}
 	defer resp.Body.Close()
 
@@ -28,7 +31,10 @@ func getMLBPlayerList() ([]string, error) {
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
+		c.JSON(500, gin.H{
+			"status":  "Internal Server Error",
+			"message": "Error decoding MLB player list",
+		})
 	}
 
 	var playerNames []string
@@ -36,5 +42,8 @@ func getMLBPlayerList() ([]string, error) {
 		playerNames = append(playerNames, player.FullName)
 	}
 
-	return playerNames, nil
+	c.JSON(200, gin.H{
+		"status":  "ok",
+		"players": playerNames,
+	})
 }
