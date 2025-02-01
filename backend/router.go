@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
+	"github.com/mohsen/fbdr/models"
 )
 
 func healthCheck(c *gin.Context) {
@@ -46,4 +48,29 @@ func getMLBPlayerList(c *gin.Context) {
 		"status":  "ok",
 		"players": playerNames,
 	})
+}
+
+func submit(f *firestore.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var user models.Request
+		if err := c.BindJSON(&user); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid request body",
+			})
+			return
+		}
+
+		// Add document to Firestore
+		_, _, err := f.Collection("users").Add(c, user)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to save to Firestore",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "User created successfully",
+		})
+	}
 }

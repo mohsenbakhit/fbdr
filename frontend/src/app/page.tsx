@@ -51,7 +51,11 @@ export default function Home() {
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
-    // Handle form submission (e.g., send data to an API)
+    axios.post('/api/submit', {
+      "email": email,
+      "favoriteTeams": favoriteTeams,
+      "favoritePlayers": favoritePlayers
+    })
     console.log('Email:', email);
     console.log('Favorite Teams:', favoriteTeams);
     console.log('Favorite Players:', favoritePlayers);

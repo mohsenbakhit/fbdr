@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
+	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/option"
@@ -13,19 +15,21 @@ func main() {
 	ctx := context.Background()
 	app, err := setupFirebase()
 	if err != nil {
-		fmt.Errorf("Error initializing app: %v\n", err)
-		return
+		panic(fmt.Errorf("Error initializing Firebase: %v\n", err))
 	}
-	db, err := app.Database(ctx)
+	firebaseProjectID := os.Getenv("FIREBASE_PROJECT_ID")
+	db, err := firestore.NewClient(ctx, firebaseProjectID)
 	if err != nil {
-		fmt.Errorf("Error initializing database: %v\n", err)
-		return
+		panic(fmt.Errorf("Error connecting to Firestore: %v\n", err))
 	}
-	r := setupRouter()
-	r.Run(":8080")
+	r := setupRouter(db, app)
+	err = r.Run(":8080")
+	if err != nil {
+		panic(fmt.Errorf("Error starting server: %v\n", err))
+	}
 }
 
-func setupRouter() *gin.Engine {
+func setupRouter(firestoreClient *firestore.Client, app *firebase.App) *gin.Engine {
 	r := gin.Default()
 
 	r.Use(corsMiddleware())
@@ -34,6 +38,7 @@ func setupRouter() *gin.Engine {
 	{
 		api.GET("/health", healthCheck)
 		api.GET("/mlb-players", getMLBPlayerList)
+		api.POST("/submit", submit(firestoreClient))
 	}
 
 	return r
