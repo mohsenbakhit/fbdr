@@ -1,21 +1,22 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
-	"cloud.google.com/go/firestore"
 	"github.com/gin-gonic/gin"
-	"github.com/mohsen/fbdr/models"
+	"github.com/mohsenbakhit/fbdr/models"
 )
 
-func healthCheck(c *gin.Context) {
+func HealthCheck(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"status": "ok",
 	})
 }
 
-func getMLBPlayerList(c *gin.Context) {
+// getMLBPlayerList fetches a list of active MLB players from statsapi.mlb.com
+func GetMLBPlayerList(c *gin.Context) {
 	url := "https://statsapi.mlb.com/api/v1/sports/1/players?activeStatus=active"
 	resp, err := http.Get(url)
 	if err != nil {
@@ -23,6 +24,7 @@ func getMLBPlayerList(c *gin.Context) {
 			"status":  "Internal Server Error",
 			"message": "Error fetching MLB player list",
 		})
+		return
 	}
 	defer resp.Body.Close()
 
@@ -37,6 +39,7 @@ func getMLBPlayerList(c *gin.Context) {
 			"status":  "Internal Server Error",
 			"message": "Error decoding MLB player list",
 		})
+		return
 	}
 
 	var playerNames []string
@@ -50,27 +53,26 @@ func getMLBPlayerList(c *gin.Context) {
 	})
 }
 
-func submit(f *firestore.Client) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		var user models.Request
-		if err := c.BindJSON(&user); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid request body",
-			})
-			return
-		}
-
-		// Add document to Firestore
-		_, _, err := f.Collection("users").Add(c, user)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to save to Firestore",
-			})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"message": "User created successfully",
+// submit takes the body of the POST request and calls the Gemini function
+func Submit(c *gin.Context) {
+	var user models.Request
+	if err := c.BindJSON(&user); err != nil {
+		c.JSON(400, gin.H{
+			"status":  "Bad Request",
+			"message": "Invalid request body",
 		})
+		return
 	}
+
+	_, err := coll.InsertOne(context.TODO(), user)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"status":  "Internal Server Error",
+			"message": "Error inserting user",
+		})
+		return
+	}
+	c.JSON(200, gin.H{
+		"status": "ok",
+	})
 }
